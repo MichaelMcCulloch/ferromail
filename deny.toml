@@ -1,0 +1,70 @@
+# cargo-deny configuration
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+ignore = []
+
+[licenses]
+confidence-threshold = 0.93
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+    "OpenSSL",
+]
+exceptions = [
+    # ring uses a bespoke license that bundles several BSD-like terms + OpenSSL
+    { allow = ["LicenseRef-ring"], crate = "ring" },
+    # webpki derives from Chromium's fork; triple-license
+    { allow = ["LicenseRef-webpki"], crate = "webpki" },
+]
+
+[[licenses.clarify]]
+crate = "ring"
+expression = "LicenseRef-ring"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[[licenses.clarify]]
+crate = "webpki"
+expression = "LicenseRef-webpki"
+license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+# Hard-ban crates we never want showing up transitively.
+deny = [
+    # OpenSSL-the-C-library: we are a rustls-only shop.
+    { crate = "openssl" },
+    { crate = "openssl-sys" },
+    { crate = "native-tls" },
+    # git2 pulls libgit2 + OpenSSL; unrelated to our needs.
+    { crate = "git2" },
+]
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

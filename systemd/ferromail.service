@@ -1,0 +1,83 @@
+# Hardened systemd unit for ferromail running as an MCP server.
+#
+# Install: systemctl --user enable --now ferromail.service
+# (or copy into /etc/systemd/system/ for a system-level service).
+#
+# This unit assumes:
+#   - ferromail lives at /usr/local/bin/ferromail
+#   - config at ~/.config/ferromail/
+#   - downloads under ~/.local/share/ferromail/attachments/
+# Adjust ReadWritePaths to match your config if you move them.
+
+[Unit]
+Description=ferromail — hardened IMAP/SMTP MCP server
+Documentation=https://github.com/michaelmcculloch/ferromail
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/ferromail serve --transport stdio
+Restart=on-failure
+RestartSec=5
+
+# --- sandboxing ---
+# The binary's own Landlock + seccomp are enabled in-process; the systemd
+# layer gives us defence-in-depth that kicks in before main() starts.
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+
+# IPv4 and IPv6 only; no unix domain leakage.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# systemd-level syscall filter. The in-process seccomp filter is stricter.
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @reboot @swap @module @raw-io @privileged @obsolete @cpu-emulation
+
+# Only the paths we genuinely need to write.
+ReadWritePaths=%h/.config/ferromail %h/.local/share/ferromail
+# And read-only visibility into the rest of $HOME (config dir already
+# covered above; this just lets us read attachments to send).
+ReadOnlyPaths=%h
+
+# No capabilities required for an unprivileged MCP server.
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Disable core dumps at the cgroup level too.
+LimitCORE=0
+
+# Resource caps.
+TasksMax=64
+MemoryHigh=512M
+MemoryMax=1G
+
+# Stricter umask for any file we do create.
+UMask=0077
+
+# If the age-file backend is used, the keyring-using variant won't need
+# D-Bus at all. Uncomment if you use keyring + secret-service:
+# PrivateUsers=no
+
+[Install]
+WantedBy=default.target

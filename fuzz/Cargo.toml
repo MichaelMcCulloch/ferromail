@@ -1,0 +1,54 @@
+[package]
+name = "ferromail-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tempfile = "3"
+
+[dependencies.ferromail]
+path = ".."
+
+# Prevent fuzzing harnesses from being included in workspace root.
+[workspace]
+members = []
+
+[[bin]]
+name = "fuzz_mime"
+path = "fuzz_targets/fuzz_mime.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_filename"
+path = "fuzz_targets/fuzz_filename.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_sandbox"
+path = "fuzz_targets/fuzz_sandbox.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_imap_response"
+path = "fuzz_targets/fuzz_imap_response.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_email_address"
+path = "fuzz_targets/fuzz_email_address.rs"
+test = false
+doc = false
+bench = false
