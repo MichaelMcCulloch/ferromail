@@ -14,28 +14,28 @@ Status: **v0.1 complete.** stdio + SSE/HTTP transports both working. 160 tests p
 ferromail assumes three adversaries simultaneously, and defends against each
 independently:
 
-| Adversary | Defense |
-| --- | --- |
+| Adversary                                                    | Defense                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Malicious email sender** trying to prompt-inject the agent | Every field of every fetched message lives in its own `<ferromail:field name="...">` tag inside a `<ferromail:untrusted>` envelope; tag closers are escaped post-sanitize. HTML stripped to plaintext via `ammonia`. Bidi overrides, UTF-7, invisible chars, and control characters stripped. **DKIM / SPF / DMARC / ARC** authentication results (both upstream `Authentication-Results` and local DKIM re-verification via `mail-auth`) surfaced as `<ferromail:auth trusted="...">`. **Sender-spoof heuristics** (display-name embedding a different `@addr`, Cyrillic homograph domains, invisible chars in the domain) surfaced as `<ferromail:spoof suspicious="...">`. |
-| **Malicious/compromised IMAP or SMTP server** | rustls with the **aws-lc-rs** provider → **X25519MLKEM768 post-quantum hybrid** KEX enabled by default. Platform verifier, min TLS 1.2. STARTTLS buffer-discard on upgrade. PREAUTH on plaintext is rejected. Server referrals are logged but never followed. Unsolicited responses are rate-limited. |
-| **Jailbroken agent** trying to exfiltrate or destroy | **Cedar policy engine** evaluates every write/destructive tool call against `policy.cedar` before the confirmation gate — rejected calls never prompt the user. Every remaining call is gated (MCP client UI, terminal y/N, or webhook). Destructive ops add a 3-second cooldown. Rate limits: 20 sends/hour, 100 deletes/hour per account. Path sandboxing with canonicalize + prefix assertion on every file write. **MTA-STS policy fetch** for each recipient domain is logged. |
-| **Host-level compromise** of the MCP process | **Landlock** (Linux ≥ 5.13) restricts FS access to config, downloads, and send-allow dirs. **seccomp-bpf** deny-list kills the usual post-exploit syscall surface (ptrace, bpf, kexec, module load, keyctl, namespace surgery, etc.) before tokio spawns workers, so the filter inherits on clone. `prctl(PR_SET_NO_NEW_PRIVS, 1)` + `PR_SET_DUMPABLE=0` + `RLIMIT_CORE=0`. Ship with the provided hardened `systemd/ferromail.service` for a second layer (NoNewPrivs, ProtectSystem=strict, SystemCallFilter, MemoryDenyWriteExecute, etc). |
-| **Credential compromise** via stolen password | **OAuth2 / XOAUTH2 / OAUTHBEARER** for Gmail and Microsoft 365 (device-code flow, access+refresh tokens in the OS keyring or age-file). App passwords remain supported for providers that still need them. Secrets wrapped in `secrecy::SecretString`, zeroized on drop. |
+| **Malicious/compromised IMAP or SMTP server**                | rustls with the **aws-lc-rs** provider → **X25519MLKEM768 post-quantum hybrid** KEX enabled by default. Platform verifier, min TLS 1.2. STARTTLS buffer-discard on upgrade. PREAUTH on plaintext is rejected. Server referrals are logged but never followed. Unsolicited responses are rate-limited.                                                                                                                                                                                                                                                                                                                                                                         |
+| **Jailbroken agent** trying to exfiltrate or destroy         | **Cedar policy engine** evaluates every write/destructive tool call against `policy.cedar` before the confirmation gate — rejected calls never prompt the user. Every remaining call is gated (MCP client UI, terminal y/N, or webhook). Destructive ops add a 3-second cooldown. Rate limits: 20 sends/hour, 100 deletes/hour per account. Path sandboxing with canonicalize + prefix assertion on every file write. **MTA-STS policy fetch** for each recipient domain is logged.                                                                                                                                                                                           |
+| **Host-level compromise** of the MCP process                 | **Landlock** (Linux ≥ 5.13) restricts FS access to config, downloads, and send-allow dirs. **seccomp-bpf** deny-list kills the usual post-exploit syscall surface (ptrace, bpf, kexec, module load, keyctl, namespace surgery, etc.) before tokio spawns workers, so the filter inherits on clone. `prctl(PR_SET_NO_NEW_PRIVS, 1)` + `PR_SET_DUMPABLE=0` + `RLIMIT_CORE=0`. Ship with the provided hardened `systemd/ferromail.service` for a second layer (NoNewPrivs, ProtectSystem=strict, SystemCallFilter, MemoryDenyWriteExecute, etc).                                                                                                                                 |
+| **Credential compromise** via stolen password                | **OAuth2 / XOAUTH2 / OAUTHBEARER** for Gmail and Microsoft 365 (device-code flow, access+refresh tokens in the OS keyring or age-file). App passwords remain supported for providers that still need them. Secrets wrapped in `secrecy::SecretString`, zeroized on drop.                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 All of this is defense in depth: the LLM system prompt is a recommendation,
 the confirmation gate is the hard boundary.
 
 ## MCP tools exposed
 
-| Tool | Tier | Description |
-| --- | --- | --- |
-| `list_accounts` | read | Masked account list (no credentials) |
-| `list_emails` | read | Paginated metadata with filters (date, sender, subject, flags) |
-| `get_email_content` | read | Sanitized body + headers + attachment metadata, wrapped in isolation markers |
-| `send_email` | write | Requires confirmation |
-| `reply_to_email` | write | Requires confirmation; preserves `In-Reply-To` / `References` |
-| `delete_emails` | destructive | Requires confirmation + 3s cooldown; UID STORE + EXPUNGE |
-| `download_attachment` | destructive | Requires confirmation; writes to sandbox only |
+| Tool                  | Tier        | Description                                                                  |
+| --------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `list_accounts`       | read        | Masked account list (no credentials)                                         |
+| `list_emails`         | read        | Paginated metadata with filters (date, sender, subject, flags)               |
+| `get_email_content`   | read        | Sanitized body + headers + attachment metadata, wrapped in isolation markers |
+| `send_email`          | write       | Requires confirmation                                                        |
+| `reply_to_email`      | write       | Requires confirmation; preserves `In-Reply-To` / `References`                |
+| `delete_emails`       | destructive | Requires confirmation + 3s cooldown; UID STORE + EXPUNGE                     |
+| `download_attachment` | destructive | Requires confirmation; writes to sandbox only                                |
 
 See `src/transport/stdio.rs` for the JSON-Schema input definitions and
 `specs/001-hardened-mcp-email/contracts/mcp-tools.md` for the full contract.
@@ -109,11 +109,11 @@ ferromail serve --transport sse --host 127.0.0.1 --port 9557
 The `[confirmation].channel` setting in `config.toml` picks how write/destructive
 operations get approved:
 
-| Channel | Behavior |
-| --- | --- |
-| `"none"` *(default)* | No ferromail-level prompt. The MCP client's per-tool approval UI is the trust boundary. Destructive cooldown still applies. |
-| `"terminal"` | y/N prompt on stderr, reading from `/dev/tty`. Use when running ferromail as a standalone CLI in a terminal. Fails if stderr isn't a TTY. |
-| `"webhook"` | POST the summary to `webhook_url`; proceed only on `{"approve": true}`. Use for headless deployments with a local approval UI or remote approver. |
+| Channel              | Behavior                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"none"` *(default)* | No ferromail-level prompt. The MCP client's per-tool approval UI is the trust boundary. Destructive cooldown still applies.                       |
+| `"terminal"`         | y/N prompt on stderr, reading from `/dev/tty`. Use when running ferromail as a standalone CLI in a terminal. Fails if stderr isn't a TTY.         |
+| `"webhook"`          | POST the summary to `webhook_url`; proceed only on `{"approve": true}`. Use for headless deployments with a local approval UI or remote approver. |
 
 ## Configuration
 
@@ -150,10 +150,10 @@ under `[limits]`, `[timeouts]`, `[rate_limits]`, `[attachments]`,
 
 ### Credential storage
 
-| Backend | How |
-| --- | --- |
-| `keyring` (default) | OS keyring — Secret Service on Linux, Keychain on macOS |
-| `age-file` | age-encrypted file at `~/.config/ferromail/credentials.age`, passphrase prompted on each access |
+| Backend             | How                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| `keyring` (default) | OS keyring — Secret Service on Linux, Keychain on macOS                                         |
+| `age-file`          | age-encrypted file at `~/.config/ferromail/credentials.age`, passphrase prompted on each access |
 
 Override via the `[credentials]` section of config. Passwords are wrapped in
 `secrecy::SecretString` and zeroized on drop. Core dumps are disabled via
@@ -233,4 +233,4 @@ research, data model, and contracts.
 
 ## License
 
-TBD.
+MIT
