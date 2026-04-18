@@ -56,20 +56,21 @@ test:linux:
     - cargo build --all-targets
     - cargo test --all-targets -- --test-threads=1
 
-# Requires GitLab.com SaaS macOS runners (or self-hosted equivalent).
-# Remove or adjust `tags:` if your instance uses different runner tags.
+# Manual trigger only — this GitLab instance has no macOS runner. Adjust the
+# `tags:` value to match whatever runner you wire up (e.g. self-hosted mac).
 test:macos:
   stage: test
   tags:
     - saas-macos-medium-m1
   image: macos-14-xcode-15
+  when: manual
+  allow_failure: true
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
     - source "$HOME/.cargo/env"
   script:
     - cargo build --all-targets
     - cargo test --all-targets -- --test-threads=1
-  allow_failure: true
 
 advisory:
   stage: security
