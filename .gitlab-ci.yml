@@ -8,7 +8,7 @@ variables:
   CARGO_TERM_COLOR: "always"
   RUSTFLAGS: "-D warnings"
   RUST_BACKTRACE: "1"
-  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  SCCACHE_VERSION: "0.8.2"
 
 workflow:
   rules:
@@ -16,22 +16,24 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
-.rust-cache: &rust-cache
-  cache:
-    key:
-      files:
-        - Cargo.lock
-    paths:
-      - .cargo/registry/index/
-      - .cargo/registry/cache/
-      - .cargo/git/db/
-      - target/
+# The k8s runner injects RUSTC_WRAPPER=sccache (with Redis backend env vars),
+# but the rust:1 image doesn't ship the binary. Drop in the released musl
+# build so cargo can find it; sccache then talks to Redis on its own.
+# This is also why there's no GitLab cache config — sccache handles it.
+.install-sccache:
+  before_script:
+    - |
+      if ! command -v sccache >/dev/null; then
+        curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/sccache-v${SCCACHE_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o /tmp/sccache.tar.gz
+        tar -xzf /tmp/sccache.tar.gz -C /tmp
+        install -m 0755 "/tmp/sccache-v${SCCACHE_VERSION}-x86_64-unknown-linux-musl/sccache" /usr/local/bin/sccache
+      fi
 
 lint:
   stage: lint
   image: rust:1
-  <<: *rust-cache
   before_script:
+    - !reference [.install-sccache, before_script]
     - rustup component add rustfmt clippy
   script:
     - cargo fmt --all --check
@@ -40,7 +42,8 @@ lint:
 test:linux:
   stage: test
   image: rust:1
-  <<: *rust-cache
+  before_script:
+    - !reference [.install-sccache, before_script]
   script:
     - cargo build --all-targets
     - cargo test --all-targets -- --test-threads=1
@@ -52,10 +55,9 @@ test:macos:
   tags:
     - saas-macos-medium-m1
   image: macos-14-xcode-15
-  <<: *rust-cache
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
-    - source "$CARGO_HOME/env"
+    - source "$HOME/.cargo/env"
   script:
     - cargo build --all-targets
     - cargo test --all-targets -- --test-threads=1
@@ -64,8 +66,9 @@ test:macos:
 advisory:
   stage: security
   image: rust:1
-  <<: *rust-cache
   # Nightly schedule keeps new RUSTSEC IDs hitting a green baseline.
+  before_script:
+    - !reference [.install-sccache, before_script]
   script:
     - cargo install --locked cargo-audit
     - cargo audit
@@ -73,7 +76,8 @@ advisory:
 deny:
   stage: security
   image: rust:1
-  <<: *rust-cache
+  before_script:
+    - !reference [.install-sccache, before_script]
   script:
     - cargo install --locked cargo-deny
     - cargo deny check bans licenses sources advisories
@@ -93,7 +97,8 @@ semgrep:
 sbom:
   stage: package
   image: rust:1
-  <<: *rust-cache
+  before_script:
+    - !reference [.install-sccache, before_script]
   script:
     - cargo install --locked cargo-cyclonedx
     - cargo cyclonedx --format json --override-filename ferromail-sbom
@@ -105,6 +110,7 @@ sbom:
 msrv:
   stage: test
   image: rust:1.92.0
-  <<: *rust-cache
+  before_script:
+    - !reference [.install-sccache, before_script]
   script:
     - cargo check --all-targets
