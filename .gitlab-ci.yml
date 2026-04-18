@@ -1,0 +1,110 @@
+stages:
+  - lint
+  - test
+  - security
+  - package
+
+variables:
+  CARGO_TERM_COLOR: "always"
+  RUSTFLAGS: "-D warnings"
+  RUST_BACKTRACE: "1"
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+.rust-cache: &rust-cache
+  cache:
+    key:
+      files:
+        - Cargo.lock
+    paths:
+      - .cargo/registry/index/
+      - .cargo/registry/cache/
+      - .cargo/git/db/
+      - target/
+
+lint:
+  stage: lint
+  image: rust:1
+  <<: *rust-cache
+  before_script:
+    - rustup component add rustfmt clippy
+  script:
+    - cargo fmt --all --check
+    - cargo clippy --all-targets --all-features -- -D warnings
+
+test:linux:
+  stage: test
+  image: rust:1
+  <<: *rust-cache
+  script:
+    - cargo build --all-targets
+    - cargo test --all-targets -- --test-threads=1
+
+# Requires GitLab.com SaaS macOS runners (or self-hosted equivalent).
+# Remove or adjust `tags:` if your instance uses different runner tags.
+test:macos:
+  stage: test
+  tags:
+    - saas-macos-medium-m1
+  image: macos-14-xcode-15
+  <<: *rust-cache
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+    - source "$CARGO_HOME/env"
+  script:
+    - cargo build --all-targets
+    - cargo test --all-targets -- --test-threads=1
+  allow_failure: true
+
+advisory:
+  stage: security
+  image: rust:1
+  <<: *rust-cache
+  # Nightly schedule keeps new RUSTSEC IDs hitting a green baseline.
+  script:
+    - cargo install --locked cargo-audit
+    - cargo audit
+
+deny:
+  stage: security
+  image: rust:1
+  <<: *rust-cache
+  script:
+    - cargo install --locked cargo-deny
+    - cargo deny check bans licenses sources advisories
+
+semgrep:
+  stage: security
+  image: returntocorp/semgrep
+  variables:
+    SEMGREP_RULES: >-
+      p/rust
+      p/security-audit
+      p/secrets
+      p/supply-chain
+  script:
+    - semgrep ci --config=auto
+
+sbom:
+  stage: package
+  image: rust:1
+  <<: *rust-cache
+  script:
+    - cargo install --locked cargo-cyclonedx
+    - cargo cyclonedx --format json --override-filename ferromail-sbom
+  artifacts:
+    name: sbom
+    paths:
+      - ferromail-sbom.cdx.json
+
+msrv:
+  stage: test
+  image: rust:1.92.0
+  <<: *rust-cache
+  script:
+    - cargo check --all-targets
