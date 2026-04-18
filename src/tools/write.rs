@@ -302,19 +302,17 @@ mod tests {
     #[test]
     fn resolve_from_falls_back_to_email_address() {
         let a = account("user@example.com", vec![], "");
-        assert_eq!(
-            resolve_from_address(&a, None).unwrap(),
-            "user@example.com"
-        );
+        assert_eq!(resolve_from_address(&a, None).unwrap(), "user@example.com");
     }
 
     #[test]
     fn resolve_from_uses_default_when_set() {
-        let a = account("user@example.com", vec!["alias@example.com"], "alias@example.com");
-        assert_eq!(
-            resolve_from_address(&a, None).unwrap(),
-            "alias@example.com"
+        let a = account(
+            "user@example.com",
+            vec!["alias@example.com"],
+            "alias@example.com",
         );
+        assert_eq!(resolve_from_address(&a, None).unwrap(), "alias@example.com");
     }
 
     #[test]
@@ -365,7 +363,11 @@ mod tests {
 
     #[test]
     fn explicit_arg_overrides_default_from() {
-        let a = account("user@example.com", vec!["alias@example.com"], "alias@example.com");
+        let a = account(
+            "user@example.com",
+            vec!["alias@example.com"],
+            "alias@example.com",
+        );
         assert_eq!(
             resolve_from_address(&a, Some("user@example.com")).unwrap(),
             "user@example.com"

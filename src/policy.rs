@@ -115,7 +115,9 @@ impl PolicyEngine {
 
         let principal = EntityUid::from_type_name_and_id(
             "Account".parse().unwrap(),
-            account.parse().unwrap_or_else(|_| "unknown".parse().unwrap()),
+            account
+                .parse()
+                .unwrap_or_else(|_| "unknown".parse().unwrap()),
         );
         let action = EntityUid::from_type_name_and_id(
             "Action".parse().unwrap(),
@@ -197,9 +199,7 @@ fn build_context(tool: &str, args: &Value) -> HashMap<String, RestrictedExpressi
     domains.dedup();
     ctx.insert(
         "recipient_domains".into(),
-        RestrictedExpression::new_set(
-            domains.into_iter().map(RestrictedExpression::new_string),
-        ),
+        RestrictedExpression::new_set(domains.into_iter().map(RestrictedExpression::new_string)),
     );
 
     // Attachment sizes: we only have paths in args; size is computed later.
@@ -232,7 +232,11 @@ fn build_context(tool: &str, args: &Value) -> HashMap<String, RestrictedExpressi
         RestrictedExpression::new_bool(has_external_link),
     );
 
-    let hour_utc = chrono::Utc::now().format("%H").to_string().parse::<i64>().unwrap_or(0);
+    let hour_utc = chrono::Utc::now()
+        .format("%H")
+        .to_string()
+        .parse::<i64>()
+        .unwrap_or(0);
     ctx.insert("hour_utc".into(), RestrictedExpression::new_long(hour_utc));
 
     ctx.insert(
@@ -252,7 +256,10 @@ mod tests {
     fn empty_engine_allows() {
         let eng = PolicyEngine::new();
         let args = json!({"to": ["x@example.com"]});
-        assert_eq!(eng.evaluate("send_email", &args, "work"), PolicyDecision::Allow);
+        assert_eq!(
+            eng.evaluate("send_email", &args, "work"),
+            PolicyDecision::Allow
+        );
     }
 
     #[test]
@@ -283,7 +290,10 @@ mod tests {
         };
         let allowed = json!({"to": ["user@example.com"]});
         let denied = json!({"to": ["hacker@attacker.biz"]});
-        assert_eq!(eng.evaluate("send_email", &allowed, "work"), PolicyDecision::Allow);
+        assert_eq!(
+            eng.evaluate("send_email", &allowed, "work"),
+            PolicyDecision::Allow
+        );
         assert!(matches!(
             eng.evaluate("send_email", &denied, "work"),
             PolicyDecision::Deny(_)
@@ -299,6 +309,9 @@ mod tests {
             entities: Entities::empty(),
             authorizer: Authorizer::new(),
         };
-        assert_eq!(eng.evaluate("list_emails", &json!({}), "work"), PolicyDecision::Allow);
+        assert_eq!(
+            eng.evaluate("list_emails", &json!({}), "work"),
+            PolicyDecision::Allow
+        );
     }
 }

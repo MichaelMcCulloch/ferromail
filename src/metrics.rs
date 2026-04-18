@@ -31,8 +31,7 @@ impl Metrics {
         let registry = Registry::new();
 
         let tool_calls = IntCounterVec::new(
-            Opts::new("ferromail_tool_calls_total", "MCP tool invocations")
-                .namespace("ferromail"),
+            Opts::new("ferromail_tool_calls_total", "MCP tool invocations").namespace("ferromail"),
             &["tool", "outcome"],
         )
         .expect("counter vec");
@@ -101,13 +100,19 @@ impl Metrics {
         registry.register(Box::new(gate_approvals.clone())).unwrap();
         registry.register(Box::new(gate_denials.clone())).unwrap();
         registry.register(Box::new(policy_denials.clone())).unwrap();
-        registry.register(Box::new(rate_limit_hits.clone())).unwrap();
+        registry
+            .register(Box::new(rate_limit_hits.clone()))
+            .unwrap();
         registry.register(Box::new(login_lockouts.clone())).unwrap();
         registry
             .register(Box::new(imap_connect_seconds.clone()))
             .unwrap();
-        registry.register(Box::new(oauth_refreshes.clone())).unwrap();
-        registry.register(Box::new(mta_sts_fetches.clone())).unwrap();
+        registry
+            .register(Box::new(oauth_refreshes.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(mta_sts_fetches.clone()))
+            .unwrap();
 
         Self {
             registry,
@@ -157,9 +162,7 @@ mod tests {
         m.tool_calls.with_label_values(&["send_email", "ok"]).inc();
         m.gate_approvals.inc();
         m.policy_denials.inc();
-        m.rate_limit_hits
-            .with_label_values(&["work", "send"])
-            .inc();
+        m.rate_limit_hits.with_label_values(&["work", "send"]).inc();
 
         let text = m.render();
         let s = String::from_utf8(text).unwrap();

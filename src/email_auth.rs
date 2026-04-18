@@ -122,9 +122,16 @@ fn summarize_dkim(outputs: &[mail_auth::DkimOutput<'_>]) -> String {
         }
     }
     if fails.is_empty() {
-        format!("pass ({passes} signature{})", if passes == 1 { "" } else { "s" })
+        format!(
+            "pass ({passes} signature{})",
+            if passes == 1 { "" } else { "s" }
+        )
     } else if passes > 0 {
-        format!("mixed ({passes} pass, {} fail: {})", fails.len(), fails.join(", "))
+        format!(
+            "mixed ({passes} pass, {} fail: {})",
+            fails.len(),
+            fails.join(", ")
+        )
     } else {
         format!("fail ({})", fails.join(", "))
     }
@@ -168,7 +175,10 @@ fn extract_upstream_arc(raw: &[u8]) -> Option<String> {
     let text = std::str::from_utf8(&raw[..end_of_headers]).ok()?;
     for header_line in unfold_headers(text) {
         let (name, value) = header_line.split_once(':')?;
-        if name.trim().eq_ignore_ascii_case("arc-authentication-results") {
+        if name
+            .trim()
+            .eq_ignore_ascii_case("arc-authentication-results")
+        {
             return Some(value.trim().to_string());
         }
     }
@@ -211,10 +221,7 @@ fn unfold_headers(text: &str) -> Vec<String> {
 fn compute_trust(upstream: &Option<String>, dkim_local: &Option<String>) -> bool {
     let upstream_pass = upstream
         .as_deref()
-        .map(|u| {
-            u.contains("dmarc=pass")
-                || (u.contains("dkim=pass") && !u.contains("dkim=fail"))
-        })
+        .map(|u| u.contains("dmarc=pass") || (u.contains("dkim=pass") && !u.contains("dkim=fail")))
         .unwrap_or(false);
     let local_ok = dkim_local
         .as_deref()
@@ -274,5 +281,4 @@ mod tests {
         ));
         assert!(!compute_trust(&None, &Some("pass (1 signature)".into())));
     }
-
 }

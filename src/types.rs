@@ -169,11 +169,19 @@ pub struct AuditEntry {
     pub service_version: String,
 
     /// OTEL `server.address` — mail server hostname for network ops.
-    #[serde(rename = "server.address", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "server.address",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub server_address: String,
 
     /// OTEL `server.port`.
-    #[serde(rename = "server.port", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "server.port",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub server_port: Option<u16>,
 
     /// Operation-specific structured attributes. Keys should use OTEL

@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 
 use crate::config::LimitsConfig;
 use crate::email_auth::{self, InboundAuthConfig};
-use crate::sanitize::{body::sanitize_body, header::sanitize_header, isolation, spoof::SpoofSignals};
+use crate::sanitize::{
+    body::sanitize_body, header::sanitize_header, isolation, spoof::SpoofSignals,
+};
 use crate::types::{
     AttachmentInfo, EmailContent, EmailFlags, EmailMetadata, EmailMetadataPage, FlagFilter, Result,
     SortOrder,
@@ -266,7 +268,11 @@ pub async fn get_email_content(
             ),
         };
 
-        let raw_body_text = parsed.text_body.clone().or(parsed.html_body.clone()).unwrap_or_default();
+        let raw_body_text = parsed
+            .text_body
+            .clone()
+            .or(parsed.html_body.clone())
+            .unwrap_or_default();
         let body_content_type = if parsed.html_body.is_some() && parsed.text_body.is_none() {
             "text/html"
         } else {

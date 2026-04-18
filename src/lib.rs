@@ -11,9 +11,9 @@ pub mod login_gate;
 pub mod metrics;
 pub mod mime_parse;
 pub mod mta_sts;
+pub mod oauth;
 #[cfg(target_os = "linux")]
 pub mod os_sandbox;
-pub mod oauth;
 pub mod policy;
 pub mod rate_limit;
 pub mod sandbox;

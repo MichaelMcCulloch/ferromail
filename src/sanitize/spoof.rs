@@ -36,9 +36,7 @@ impl SpoofSignals {
 
         let display_name_embeds_address = display.and_then(|d| detect_embedded_addr(&d, &addr));
         let confusable_domain = domain.as_ref().and_then(|d| detect_confusable_domain(d));
-        let invisible_chars_in_domain = domain
-            .as_ref()
-            .is_some_and(|d| contains_invisible(d));
+        let invisible_chars_in_domain = domain.as_ref().is_some_and(|d| contains_invisible(d));
 
         let suspicious = display_name_embeds_address.is_some()
             || confusable_domain.is_some()

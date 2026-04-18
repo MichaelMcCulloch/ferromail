@@ -208,7 +208,9 @@ pub async fn refresh(cfg: &OAuthConfig, refresh_token: &SecretString) -> Result<
     let http_client = make_http_client(15)?;
 
     let response = client
-        .exchange_refresh_token(&RefreshToken::new(refresh_token.expose_secret().to_string()))
+        .exchange_refresh_token(&RefreshToken::new(
+            refresh_token.expose_secret().to_string(),
+        ))
         .request_async(&http_client)
         .await
         .map_err(|e| FerromailError::ConfigError(format!("refresh token exchange: {e}")))?;
@@ -230,7 +232,10 @@ pub async fn refresh(cfg: &OAuthConfig, refresh_token: &SecretString) -> Result<
 /// user + access token. The format is defined in
 /// https://developers.google.com/gmail/imap/xoauth2-protocol.
 pub fn xoauth2_sasl_initial(user: &str, access_token: &SecretString) -> String {
-    let raw = format!("user={user}\x01auth=Bearer {}\x01\x01", access_token.expose_secret());
+    let raw = format!(
+        "user={user}\x01auth=Bearer {}\x01\x01",
+        access_token.expose_secret()
+    );
     base64::engine::general_purpose::STANDARD.encode(raw.as_bytes())
 }
 
@@ -281,10 +286,16 @@ mod tests {
 
     #[test]
     fn xoauth2_format_matches_spec() {
-        let token = SecretString::new("vF9dft4qmTc2Nvb3RlckBhdHRhdmlzdGEuY29tCg==".to_string().into_boxed_str());
+        let token = SecretString::new(
+            "vF9dft4qmTc2Nvb3RlckBhdHRhdmlzdGEuY29tCg=="
+                .to_string()
+                .into_boxed_str(),
+        );
         let encoded = xoauth2_sasl_initial("someuser@example.com", &token);
         // Decode and verify the inner structure.
-        let decoded = base64::engine::general_purpose::STANDARD.decode(&encoded).unwrap();
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(&encoded)
+            .unwrap();
         let s = std::str::from_utf8(&decoded).unwrap();
         assert!(s.starts_with("user=someuser@example.com\x01auth=Bearer "));
         assert!(s.ends_with("\x01\x01"));

@@ -156,9 +156,7 @@ fn main() {
                         account::list(&config);
                         Ok(())
                     }
-                    AccountAction::Test { name } => {
-                        account::test(&name, &config, &creds).await
-                    }
+                    AccountAction::Test { name } => account::test(&name, &config, &creds).await,
                     AccountAction::Enable { name } => account::enable(&name, &mut config),
                     AccountAction::Disable { name } => account::disable(&name, &mut config),
                 }

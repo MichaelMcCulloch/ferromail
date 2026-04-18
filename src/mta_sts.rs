@@ -87,9 +87,8 @@ impl Policy {
         }
 
         Ok(Policy {
-            mode: mode.ok_or_else(|| {
-                FerromailError::ConfigError("MTA-STS: missing 'mode'".into())
-            })?,
+            mode: mode
+                .ok_or_else(|| FerromailError::ConfigError("MTA-STS: missing 'mode'".into()))?,
             mx_patterns,
             max_age: max_age.unwrap_or(86_400),
         })
@@ -228,10 +227,9 @@ mod tests {
 
     #[test]
     fn wildcard_matches_single_label() {
-        let p = Policy::parse(
-            "version: STSv1\nmode: enforce\nmx: *.mail.example.com\nmax_age: 1\n",
-        )
-        .unwrap();
+        let p =
+            Policy::parse("version: STSv1\nmode: enforce\nmx: *.mail.example.com\nmax_age: 1\n")
+                .unwrap();
         assert!(p.mx_matches("mx1.mail.example.com"));
         assert!(!p.mx_matches("a.b.mail.example.com"));
         assert!(!p.mx_matches("mail.example.com"));
@@ -239,9 +237,8 @@ mod tests {
 
     #[test]
     fn literal_mx_matches_exact() {
-        let p =
-            Policy::parse("version: STSv1\nmode: enforce\nmx: mx.example.com\nmax_age: 1\n")
-                .unwrap();
+        let p = Policy::parse("version: STSv1\nmode: enforce\nmx: mx.example.com\nmax_age: 1\n")
+            .unwrap();
         assert!(p.mx_matches("mx.example.com"));
         assert!(p.mx_matches("MX.EXAMPLE.COM"));
         assert!(!p.mx_matches("other.example.com"));
