@@ -196,6 +196,17 @@ fn main() {
                 .map(|d| shellexpand(d))
                 .collect();
 
+            // Landlock attaches rules to file descriptors, so any directory
+            // we want a rule for must already exist when apply() is called.
+            // Materialize them up front; otherwise the rule is silently
+            // dropped and subsequent writes fail with EACCES.
+            for dir in [&config_dir, &download_dir] {
+                if let Err(e) = std::fs::create_dir_all(dir) {
+                    eprintln!("Error creating {}: {e}", dir.display());
+                    std::process::exit(1);
+                }
+            }
+
             // Apply OS sandbox before tokio starts so its worker threads,
             // spawned via clone(), inherit both the Landlock domain and the
             // seccomp filter.
